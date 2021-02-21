@@ -13,9 +13,9 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 		$this->has_fields = true;
 		$this->method_title = 'Buono docente';
 		$this->method_description = 'Consente ai docenti di utilizzare il buono a loro riservato per l\'acquisto di materiale didattico.';
-		
+
 		if(get_option('wccd-image')) {
-			$this->icon = WCCD_URI . 'images/carta-docente.png';			
+			$this->icon = WCCD_URI . 'images/carta-docente.png';
 		}
 
 		$this->init_form_fields();
@@ -36,7 +36,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 	 * Campi relativi al sistema di pagamento, modificabili nel back-end
 	 */
 	public function init_form_fields() {
-		
+
 		$this->form_fields = apply_filters( 'wc_offline_form_fields',array(
 			'enabled' => array(
 		        'title' => __( 'Enable/Disable', 'woocommerce' ),
@@ -62,7 +62,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 
 
 	/**
-	 * Campo per l'inserimento del buono nella pagina di checkout 
+	 * Campo per l'inserimento del buono nella pagina di checkout
 	 */
 	public function payment_fields() {
 		?>
@@ -89,14 +89,14 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 		$wccd_categories = get_option('wccd-categories');
 
 		if ( $wccd_categories ) {
-	
+
 			$purchasable = str_replace( '(', '', $purchasable );
 			$purchasable = str_replace( ')', '', $purchasable );
 			$bene        = strtolower( str_replace( ' ', '-', $purchasable ) );
-			
+
 			$output = array();
 
-			for($i=0; $i < count($wccd_categories); $i++) { 
+			for($i=0; $i < count($wccd_categories); $i++) {
 				if(array_key_exists($bene, $wccd_categories[$i])) {
 
 					$output[] = $wccd_categories[$i][$bene];
@@ -104,15 +104,15 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 			}
 
 			return $output;
-				
+
 		}
 
 	}
 
 
 	/**
-	 * Tutti i prodotti dell'ordine devono essere della tipologia (cat) consentita dal buono docente. 
-	 * @param  object $order  
+	 * Tutti i prodotti dell'ordine devono essere della tipologia (cat) consentita dal buono docente.
+	 * @param  object $order
 	 * @param  string $bene il bene acquistabile con il buono
 	 * @return bool
 	 */
@@ -123,7 +123,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 		$items = $order->get_items();
 
 		$output = true;
-		
+
 		if ( is_array( $cats ) && ! empty( $cats ) ) {
 
 			foreach ($items as $item) {
@@ -143,12 +143,12 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 
 				}
 
-			}		
+			}
 
 		}
 
-		return $output;
-		
+		return apply_filters( 'wccd_is_purchasable', $output, $items, $cats );
+
 	}
 
 
@@ -158,7 +158,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 	 * @return mixed        testo formattato con il buono utilizzato per l'acquisto
 	 */
 	public function display_teacher_code($order) {
-		
+
 		$data = $order->get_data();
 
 		if($data['payment_method'] === 'docente') {
@@ -189,7 +189,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 	    if($teacher_code) {
 
 		    $soapClient = new wccd_soap_client($teacher_code, $import);
-		    
+
 		    try {
 
 		    	/*Prima verifica del buono*/
@@ -197,7 +197,7 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 
 				$bene    = $response->checkResp->ambito; //il bene acquistabile con il buono inserito
 			    $importo_buono = floatval($response->checkResp->importo); //l'importo del buono inserito
-			    
+
 			    /*Verifica se i prodotti dell'ordine sono compatibili con i beni acquistabili con il buono*/
 			    $purchasable = $this->is_purchasable($order, $bene);
 
@@ -232,8 +232,8 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 						    // $order->reduce_order_stock();// Deprecated
 						    // wc_reduce_stock_levels($order_id);
 
-						    /*Svuota carrello*/ 
-						    $woocommerce->cart->empty_cart();	
+						    /*Svuota carrello*/
+						    $woocommerce->cart->empty_cart();
 
 						    /*Aggiungo il buono docente all'ordine*/
 							update_post_meta($order_id, 'wc-codice-docente', $teacher_code);
@@ -244,10 +244,10 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 						    );
 
 						} catch(Exception $e) {
-			
+
 				            $notice = $e->detail->FaultVoucher->exceptionMessage;
-				       
-				        } 
+
+				        }
 
 					}
 
@@ -256,11 +256,11 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 	        } catch(Exception $e) {
 
 	            $notice = $e->detail->FaultVoucher->exceptionMessage;
-	        
-	        }  
 
-	    }	
-		
+	        }
+
+	    }
+
 		if($notice) {
 			wc_add_notice( __('<b>Buono docente</b> - ' . $notice, 'wccd'), 'error' );
 		}
@@ -274,11 +274,11 @@ class WCCD_Teacher_Gateway extends WC_Payment_Gateway {
 
 /**
  * Se presente un certificato, aggiunge il nuovo gateway a quelli disponibili in WooCommerce
- * @param array $methods gateways disponibili 
+ * @param array $methods gateways disponibili
  */
 function wccd_add_teacher_gateway_class($methods) {
 	if(wccd_admin::get_the_file('.pem') && get_option('wccd-cert-activation')) {
-	    $methods[] = 'WCCD_Teacher_Gateway'; 
+	    $methods[] = 'WCCD_Teacher_Gateway';
 	}
 
     return $methods;
